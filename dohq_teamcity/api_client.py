@@ -14,7 +14,6 @@ from __future__ import absolute_import
 import datetime
 import json
 import mimetypes
-from multiprocessing.pool import ThreadPool
 import os
 import re
 import tempfile
@@ -66,7 +65,6 @@ class ApiClient(object):
             configuration = Configuration()
         self.configuration = configuration
 
-        self.pool = ThreadPool()
         self.rest_client = rest.RESTClientObject(configuration)
         self.default_headers = {}
         if header_name is not None:
@@ -74,10 +72,6 @@ class ApiClient(object):
         self.cookie = cookie
         # Set default User-Agent.
         self.user_agent = 'Swagger-Codegen/1.0.0/python'
-
-    def __del__(self):
-        self.pool.close()
-        self.pool.join()
 
     @property
     def user_agent(self):
@@ -274,7 +268,7 @@ class ApiClient(object):
     def call_api(self, resource_path, method,
                  path_params=None, query_params=None, header_params=None,
                  body=None, post_params=None, files=None,
-                 response_type=None, auth_settings=None, async_req=None,
+                 response_type=None, auth_settings=None, async_req=False,
                  _return_http_data_only=None, collection_formats=None,
                  _preload_content=True, _request_timeout=None):
         """Makes the HTTP request (synchronous) and returns deserialized data.
@@ -307,37 +301,16 @@ class ApiClient(object):
                                  timeout. It can also be a pair (tuple) of
                                  (connection, read) timeouts.
         :return:
-            If async_req parameter is True,
-            the request will be called asynchronously.
-            The method will return the request thread.
+            Always sync,
             If parameter async_req is False or missing,
             then the method will return the response directly.
         """
-        if not async_req:
-            return self.__call_api(resource_path, method,
+        return self.__call_api(resource_path, method,
                                    path_params, query_params, header_params,
                                    body, post_params, files,
                                    response_type, auth_settings,
                                    _return_http_data_only, collection_formats,
                                    _preload_content, _request_timeout)
-        else:
-            thread = self.pool.apply_async(
-                self.__call_api,
-                (resource_path,
-                 method,
-                 path_params,
-                 query_params,
-                 header_params,
-                 body,
-                 post_params,
-                 files,
-                 response_type,
-                 auth_settings,
-                 _return_http_data_only,
-                 collection_formats,
-                 _preload_content,
-                 _request_timeout))
-        return thread
 
     def request(self, method, url, query_params=None, headers=None,
                 post_params=None, body=None, _preload_content=True,
